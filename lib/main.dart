@@ -13,13 +13,18 @@ Future<void> main() async {
 }
 
 class Bootstrap extends StatefulWidget {
-  const Bootstrap({super.key});
+  const Bootstrap({super.key, this.loadState});
+  final Future<AppState> Function()? loadState;
   @override
   State<Bootstrap> createState() => _BootstrapState();
 }
 
 class _BootstrapState extends State<Bootstrap> {
-  late Future<AppState> _loading = _load();
+  // Preserve the original route across asynchronous loading and retries.
+  final String _initialRoute =
+      WidgetsBinding.instance.platformDispatcher.defaultRouteName;
+  late Future<AppState> _loading = _loadState();
+  Future<AppState> _loadState() => widget.loadState?.call() ?? _load();
   Future<AppState> _load() async {
     final state = AppState(
       vocabulary: await VocabularyRepository.load(),
@@ -33,21 +38,28 @@ class _BootstrapState extends State<Bootstrap> {
   Widget build(BuildContext context) => FutureBuilder<AppState>(
     future: _loading,
     builder: (context, snapshot) {
-      if (snapshot.hasData) return EssentialWordsApp(state: snapshot.data!);
+      if (snapshot.hasData) {
+        return EssentialWordsApp(
+          state: snapshot.data!,
+          initialRoute: _initialRoute,
+        );
+      }
       return MaterialApp(
-        initialRoute: '/',
         debugShowCheckedModeBanner: false,
         theme: ThemeData.dark(),
-        home: Scaffold(
+        // The loading screen has no Navigator, so it cannot consume deep links.
+        builder: (context, _) => Scaffold(
           backgroundColor: const Color(0xff121316),
           body: Center(
             child: snapshot.hasError
                 ? Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Could not load vocabulary.'),
+                      const Text('Could not load app data.'),
                       TextButton(
-                        onPressed: () => setState(() => _loading = _load()),
+                        onPressed: () => setState(() {
+                          _loading = _loadState();
+                        }),
                         child: const Text('Try again'),
                       ),
                     ],

@@ -15,30 +15,31 @@ class AppState extends ChangeNotifier {
   final Pronunciation pronunciation = Pronunciation();
   final Set<String> _learned = {};
   final List<QuizResult> _history = [];
+  static const recentHistoryLimit = 100;
   ThemeMode themeMode = ThemeMode.dark;
   Future<void> _writes = Future.value();
   String? storageError;
   Set<String> get learnedIds => Set.unmodifiable(_learned);
-  List<QuizResult> get history => List.unmodifiable(_history.reversed);
+
+  /// Recent results only; older attempts remain available through paged storage.
+  List<QuizResult> get history => List.unmodifiable(_history);
 
   Future<void> initialize() async {
-    try {
-      final values = await Future.wait<Object?>([
-        storage.loadLearned(),
-        storage.loadTheme(),
-        storage.loadHistory(),
-      ]);
-      final validIds = vocabulary.allWords.map((word) => word.uniqueId).toSet();
-      _learned.addAll((values[0] as Set<String>).intersection(validIds));
-      themeMode = switch (values[1]) {
-        'light' => ThemeMode.light,
-        'system' => ThemeMode.system,
-        _ => ThemeMode.dark,
-      };
-      _history.addAll(values[2] as List<QuizResult>);
-    } catch (error) {
-      storageError = 'Could not load saved progress: $error';
-    }
+    // Let Bootstrap offer retry if storage fails. Opening an empty state after
+    // a failed migration could make existing progress appear to be lost.
+    final values = await Future.wait<Object?>([
+      storage.loadLearned(),
+      storage.loadTheme(),
+      storage.loadHistory(limit: recentHistoryLimit),
+    ]);
+    final validIds = vocabulary.allWords.map((word) => word.uniqueId).toSet();
+    _learned.addAll((values[0] as Set<String>).intersection(validIds));
+    themeMode = switch (values[1]) {
+      'light' => ThemeMode.light,
+      'system' => ThemeMode.system,
+      _ => ThemeMode.dark,
+    };
+    _history.addAll(values[2] as List<QuizResult>);
   }
 
   bool isLearned(Word word) => _learned.contains(word.uniqueId);
@@ -53,7 +54,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _enqueue(Future<void> Function() write) {
-    // Serialize snapshots so rapid taps cannot overwrite newer progress.
+    // Preserve tap order, including rapid learn/unlearn changes to one word.
     _writes = _writes.then((_) => write()).catchError((Object error) {
       storageError = 'Could not save progress. $error';
       notifyListeners();
@@ -69,8 +70,7 @@ class AppState extends ChangeNotifier {
     }
     unawaited(HapticFeedback.selectionClick());
     notifyListeners();
-    final snapshot = Set<String>.of(_learned);
-    return _enqueue(() => storage.saveLearned(snapshot));
+    return _enqueue(() => storage.setLearned(word.uniqueId, learned));
   }
 
   Future<void> toggleTheme(bool currentlyDark) {
@@ -81,9 +81,9 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> saveResult(QuizResult result) {
-    _history.add(result);
-    final snapshot = List<QuizResult>.of(_history);
-    return _enqueue(() => storage.saveHistory(snapshot));
+    _history.insert(0, result);
+    if (_history.length > recentHistoryLimit) _history.removeLast();
+    return _enqueue(() => storage.appendResult(result));
   }
 }
 

@@ -33,7 +33,7 @@ void main() {
   );
 
   test(
-    'rapid changes save the latest snapshot and discard invalid stored IDs',
+    'rapid changes preserve tap order and ignore invalid stored IDs',
     () async {
       final storage = MemoryStorage()..learned = {'not_a_word'};
       final state = AppState(vocabulary: vocabulary, storage: storage);
@@ -45,7 +45,9 @@ void main() {
         state.setLearned(word, false),
         state.setLearned(word, true),
       ]);
-      expect(storage.learned, {word.uniqueId});
+      expect(state.learnedIds, {word.uniqueId});
+      // A one-word update does not rewrite unrelated stored IDs.
+      expect(storage.learned, {'not_a_word', word.uniqueId});
     },
   );
 
@@ -69,6 +71,35 @@ void main() {
       expect(reloaded.history.length, 1);
       expect(reloaded.history.first.toJson(), result.toJson());
       expect(reloaded.history.first.percentage, 85);
+    },
+  );
+
+  test(
+    'recent history stays bounded while storage retains every attempt',
+    () async {
+      final storage = MemoryStorage();
+      final state = AppState(vocabulary: vocabulary, storage: storage);
+      await state.initialize();
+      for (var index = 0; index < 150; index++) {
+        await state.saveResult(
+          QuizResult(
+            bookId: 1,
+            unitId: 1,
+            mode: QuizMode.enUz,
+            score: 20,
+            total: 20,
+            completedAt: index,
+          ),
+        );
+      }
+      expect(state.history.length, AppState.recentHistoryLimit);
+      expect(state.history.first.completedAt, 149);
+      expect(storage.history.length, 150);
+      final reloaded = AppState(vocabulary: vocabulary, storage: storage);
+      await reloaded.initialize();
+      expect(reloaded.history.length, AppState.recentHistoryLimit);
+      expect(reloaded.history.first.completedAt, 149);
+      expect((await storage.loadHistory(offset: 100)).length, 50);
     },
   );
 }

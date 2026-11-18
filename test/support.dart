@@ -10,10 +10,17 @@ class MemoryStorage implements ProgressStorage {
   @override
   Future<String?> loadTheme() async => theme;
   @override
-  Future<List<QuizResult>> loadHistory() async => List.of(history);
+  Future<List<QuizResult>> loadHistory({
+    int limit = 100,
+    int offset = 0,
+  }) async => history.reversed.skip(offset).take(limit).toList();
   @override
-  Future<void> saveLearned(Set<String> ids) async {
-    learned = Set.of(ids);
+  Future<void> setLearned(String wordId, bool value) async {
+    if (value) {
+      learned.add(wordId);
+    } else {
+      learned.remove(wordId);
+    }
   }
 
   @override
@@ -22,7 +29,7 @@ class MemoryStorage implements ProgressStorage {
   }
 
   @override
-  Future<void> saveHistory(List<QuizResult> results) async {
-    history = List.of(results);
+  Future<void> appendResult(QuizResult result) async {
+    history.add(result);
   }
 }

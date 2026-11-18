@@ -67,6 +67,8 @@ To run in Chrome:
 flutter run -d chrome
 ```
 
+Use `--web-port 8080` during development to keep the same browser storage between runs.
+
 The project includes Android, iOS, web, Windows, macOS, and Linux targets. iOS and macOS builds require macOS and Xcode; desktop builds require the corresponding platform's Flutter tooling.
 
 ### Dictionary and direct links
@@ -85,6 +87,28 @@ On Android and iOS, the custom URL scheme can open specific screens:
 
 Use three slashes after the scheme so the complete route reaches the app.
 
+## Offline storage
+
+Learning progress, theme preferences, and quiz attempts are stored in a local SQLite database:
+
+| Platform | Storage |
+| --- | --- |
+| Android, iOS, macOS | Native SQLite through `sqflite` |
+| Web | SQLite WebAssembly in a worker, persisted in IndexedDB through `sqflite_common_ffi_web` |
+| Windows, Linux | SQLite through `sqflite_common_ffi` |
+
+Changing a word's status updates only that word's record. Each completed quiz adds one result, and an index supports reading results in pages. The app keeps the latest 100 results in memory; all older attempts remain in the database.
+
+Existing installations automatically import their saved progress, theme, and quiz history from preferences storage once. The import runs in a transaction, and original preference values are retained. A failed import offers a retry instead of opening an empty learning state.
+
+Web storage belongs to the site's origin and remains subject to browser quotas and site-data clearing. The web SQLite adapter is currently marked experimental by its maintainer.
+
+The required `web/sqlite3.wasm` and `web/sqflite_sw.js` files are included in the project. After upgrading the SQLite packages, regenerate them before building:
+
+```sh
+dart run sqflite_common_ffi_web:setup --force
+```
+
 ## Build and verify
 
 ```sh
@@ -92,7 +116,7 @@ flutter analyze
 flutter test
 ```
 
-Tests cover vocabulary integrity, search, quiz generation, saved progress, study flows, flashcard animation, ripple feedback, and elastic scrolling.
+Tests cover vocabulary integrity, search, quiz generation, SQLite persistence and migration, paged quiz history, study flows, flashcard animation, ripple feedback, and elastic scrolling.
 
 Build an Android APK or a web release:
 
@@ -118,4 +142,4 @@ The web command bundles rendering resources locally. Serve `build/web` using a w
 | `docs/screenshots/` | App screenshots used in this README |
 | `test/` | Unit and widget tests |
 
-Built with Flutter and Dart, using `material_ui` for Material components, `shared_preferences` for local persistence, `flutter_tts` for pronunciation, and `lucide_icons_flutter` for icons.
+Built with Flutter and Dart, using `material_ui` for Material components, the `sqflite` family for local persistence, `flutter_tts` for pronunciation, and `lucide_icons_flutter` for icons. `shared_preferences` is retained only to import data from earlier installations.
