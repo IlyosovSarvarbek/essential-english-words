@@ -1,0 +1,62 @@
+﻿name: essential_words_flutter
+description: Essential English Words — English and Uzbek vocabulary learning.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.14.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  material_ui: ^1.11.1
+  flutter_tts: ^4.2.5
+  shared_preferences: ^2.5.6
+  lucide_icons_flutter: ^4.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/data/books/
+    - assets/images/
+  fonts:
+    - family: NotoSansSymbols
+      fonts:
+        - asset: assets/fonts/NotoSansSymbols.ttf
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/roboto-regular.ttf
+          weight: 400
+        - asset: assets/fonts/roboto-medium.ttf
+          weight: 500
+        - asset: assets/fonts/roboto-bold.ttf
+          weight: 700
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/icon.png
+  remove_alpha_ios: true
+  adaptive_icon_background: '#E6F4FE'
+  adaptive_icon_foreground: assets/images/android-icon-foreground.png
+  adaptive_icon_monochrome: assets/images/android-icon-monochrome.png
+  web:
+    generate: true
+    image_path: assets/images/icon.png
+    background_color: '#121316'
+    theme_color: '#121316'
+  windows:
+    generate: true
+    image_path: assets/images/icon.png
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: assets/images/icon.png
+

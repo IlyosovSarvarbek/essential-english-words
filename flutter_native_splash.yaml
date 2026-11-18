@@ -1,0 +1,11 @@
+flutter_native_splash:
+  color: '#232323'
+  color_dark: '#000000'
+  image: assets/images/splash.png
+  image_dark: assets/images/splash.png
+  android_screen_orientation: portrait
+  android_12:
+    color: '#232323'
+    color_dark: '#000000'
+    image: assets/images/splash-icon.png
+    image_dark: assets/images/splash-icon.png
